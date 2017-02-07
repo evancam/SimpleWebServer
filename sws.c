@@ -2,6 +2,9 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <stdlib.h>
+#include <netinet/in.h>
+#include <unistd.h>
 
 #define PATH_MAX 4096
 
@@ -46,7 +49,7 @@ int invokeServer(int argc, char * argv[], int * sock){
 
 }
 
-int verifyRequest(char * ){
+int verifyRequest( ){
 
 }
 
@@ -59,11 +62,11 @@ int main(int argc, char * argv[]){
 	int sock;// socket info used
 	char dir[PATH_MAX];
 
-	if(invokeServer(argc, argv[], &sock) == EXIT_FAILURE){
+	if(invokeServer(argc, argv, &sock) == EXIT_FAILURE){
 		printf("Server not successfully initialized.\n");
 		exit(EXIT_FAILURE);
 	}
 
-	strncpy(dir[], argv[2], PATH_MAX);
+	strncpy(dir, argv[2], PATH_MAX);
 
 }
