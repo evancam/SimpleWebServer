@@ -143,11 +143,12 @@ int main(int argc, char * argv[]){
 	int sock;// socket info used
 	char dir[PATH_MAX];
 	char buf[BUFFER_SIZE];
+	char inputBuf[BUFFER_SIZE];
 	ssize_t requestData;
-	//fd_set master;
+	fd_set master;
 
 	if(invokeServer(argc, argv, &sock) == EXIT_FAILURE){
-		printf("Server not successfully initialized.\n");
+		fprintf(stderr,"Server not successfully initialized.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -156,22 +157,41 @@ int main(int argc, char * argv[]){
 	/* main loop for request handling */
 	while(1){
 		
-		//FD_ZERO(&master);
-		//FD_SET(0,&master);
-		//FD_SET(sock,&master);
+		FD_ZERO(&master);
+		FD_SET(0,&master);
+		FD_SET(sock,&master);
 
-		struct clientRequest *request = calloc(1, sizeof *request);
-		request->addressSize = sizeof(request->address);
-		strncpy(request->dir, dir, PATH_MAX);
-		request->serverSocket = sock;
-
-		requestData = recvfrom(request->serverSocket, &request->buffer, BUFFER_SIZE, 0, (struct sockaddr *) &request->address,(socklen_t *) &request->addressSize);
-		
-		if(requestData < 0){
-			fprintf(stderr,"Could not read from socket.\n");
-			exit(-1);
+		if(select(sock+1, &master, NULL, NULL, NULL) == -1){
+			fprintf(stderr,"Could not create multiple input selection.\n");
+			exit(EXIT_FAILURE);
 		}
-		handleRequest(request);
+
+		if(FD_ISSET(0, &master)){
+			scanf("%s",inputBuf);
+			if(!strcmp(inputBuf, "q")){
+				fprintf(stdout,"Server exited successfully.\n");
+				exit(EXIT_SUCCESS);
+			}
+		}
+
+		if(FD_ISSET(sock, &master)){
+
+			struct clientRequest *request = calloc(1, sizeof *request);
+			request->addressSize = sizeof(request->address);
+			strncpy(request->dir, dir, PATH_MAX);
+			request->serverSocket = sock;
+
+			requestData = recvfrom(request->serverSocket, &request->buffer, BUFFER_SIZE, 0, (struct sockaddr *) &request->address,(socklen_t *) &request->addressSize);
+		
+			if(requestData < 0){
+				fprintf(stderr,"Could not read from socket.\n");
+				exit(-1);
+			}
+			handleRequest(request);
+		}
+
+
 
 	}		
+	exit(0);
 }
