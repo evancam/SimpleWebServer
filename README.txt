@@ -57,3 +57,6 @@ notes:
 if q is input at the same time as a request is sent to the socket, it is likely the server will close
 before a response is set. This has not been tested, but the q input is checked before the request is parsed.
 
+We also assume that the request to the server follows the <Method> <path> <HTTP version> convention. The server
+will encounter issues if it is thrown garbage inputs.
+
