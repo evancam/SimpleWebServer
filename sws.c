@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
@@ -77,7 +79,10 @@ int verifyRequest(char method[], char * path, char appendedPath[], char httpVer[
 	if((access(relative,F_OK) == -1) || strstr(path, "../"))  return 404;
 		
 	// Returns 200 if method is GET, path does not go up in directories, and HTTP version is correct
-	if(strcasestr(method, "GET") && !(strstr(path, "../")) && strcasestr(httpVer, "HTTP/1.0\r\n\r\n")) return 200;	
+	if(strcasestr(method, "GET") && !(strstr(path, "../")) && strcasestr(httpVer, "HTTP/1.0\r\n\r\n")){
+		strncpy(path,relative,strlen(relative));
+		return 200;	
+	}
 
 	return 400;
 
@@ -86,11 +91,13 @@ int verifyRequest(char method[], char * path, char appendedPath[], char httpVer[
 
 
 void logRequest(char * status, struct clientRequest *request){
+	
 	time_t t = time(NULL);
 	struct tm * currentTime = localtime(&t);
 	char formattedTime[18], clientMessage[PATH_MAX];
 	strftime(formattedTime,17,"%b %d %H:%M:%S",currentTime);
 	sscanf(request->buffer,"%s[ ]", clientMessage);
+
 	fprintf(stdout,"%s %s:%d %s; %s\n",formattedTime, inet_ntoa(request->address.sin_addr),ntohs(request->address.sin_port),clientMessage,status);
 }
 
@@ -99,20 +106,41 @@ void logRequest(char * status, struct clientRequest *request){
 void handleRequest(struct clientRequest *request){
 
 	char * status, * buffer;
-	char method[7],path[PATH_MAX],httpVer[PATH_MAX],clientMessage[PATH_MAX];
+	char method[7],path[PATH_MAX],httpVer[PATH_MAX];
 	sscanf(request->buffer,"%s %s %16c", method, path, httpVer);
 	buffer = calloc(BUFFER_SIZE, sizeof(char));
 	status = calloc(STATUS_SIZE, sizeof(char));	
 
+	// Determines which message to send base on response from verifyRequest
 	switch(verifyRequest(method, request->dir, path, httpVer)){
 
 	case 200:
 		strncat(status,"HTTP/1.0 200 OK",15);
-		sprintf(buffer,"%s\r\n\r\n",status);
-		
-		size_t bytes_read;
+		sprintf(buffer,"%s\r\n\r\n",status);	
+		sendto(request->serverSocket, buffer, 19, 0, (struct sockaddr *)&request->address, request->addressSize);
+		// File reading and buffer code derived from CSC 361 Lab 5 Notes
+		char * fileRead;
+		size_t bytesRead;
 		int fSize;
-		
+		FILE *input = fopen(request->dir,"r");
+
+		fseek(input, 0L, SEEK_END);
+		fSize = ftell(input);
+		fseek(input, 0L, SEEK_SET);
+		fileRead = calloc(fSize, sizeof(char));
+		bytesRead = fread(fileRead,sizeof(char),fSize,input);
+		fclose(input);
+
+		if(bytesRead <= BUFFER_SIZE){
+			sendto(request->serverSocket, fileRead, strlen(fileRead), 0, (struct sockaddr *)&request->address, request->addressSize);
+	
+		}else{
+			int index = 0;
+			while(index < bytesRead){
+				sendto(request->serverSocket, &fileRead[index], BUFFER_SIZE, 0, (struct sockaddr *)&request->address, request->addressSize);
+				index += BUFFER_SIZE;
+			}
+		}
 		break;
 
 	case 400:
@@ -127,6 +155,7 @@ void handleRequest(struct clientRequest *request){
 		sendto(request->serverSocket, buffer, 26, 0, (struct sockaddr *)&request->address, request->addressSize);
 		break;
 	
+	// If response can't be handled, send 400 request by default
 	default:
 		strncat(status,"HTTP/1.0 400 Bad Request",24);
 		sprintf(buffer,"%s\r\n\r\n",status);
@@ -134,15 +163,16 @@ void handleRequest(struct clientRequest *request){
 		break;
 
 	}
-	
+
 	logRequest(status, request);
+	free(buffer);
+	free(status);
 }
 
 int main(int argc, char * argv[]){
 	
-	int sock;// socket info used
+	int sock; // socket info used
 	char dir[PATH_MAX];
-	char buf[BUFFER_SIZE];
 	char inputBuf[BUFFER_SIZE];
 	ssize_t requestData;
 	fd_set master;
@@ -185,13 +215,14 @@ int main(int argc, char * argv[]){
 		
 			if(requestData < 0){
 				fprintf(stderr,"Could not read from socket.\n");
-				exit(-1);
+				exit(EXIT_FAILURE);
 			}
 			handleRequest(request);
+			free(request);
 		}
 
 
 
 	}		
-	exit(0);
+	exit(EXIT_SUCCESS);
 }
