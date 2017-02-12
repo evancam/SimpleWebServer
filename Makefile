@@ -8,4 +8,5 @@ sws:
 	gcc sws.c -o sws -Wall
 
 clean:
-	rm -rf *.out sws	
+	rm -rf *.out sws
+	chmod 200 www/cantRead	

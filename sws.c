@@ -67,16 +67,19 @@ int invokeServer(int argc, char * argv[], int * sock){
 
 int verifyRequest(char method[], char * path, char appendedPath[], char httpVer[]){
 	
+	// Makes pathing relative
 	char relative[PATH_MAX] = ".";
+
+	if(strncmp(path,"/",1) != 0) strncat(relative,"/",1);
 	if(strcmp(appendedPath,"/") == 0){
-		 strncat(path, "index.html",11);
+		 strncat(path, "/index.html",11);
 	}else{
 		strncat(path,appendedPath,strlen(appendedPath));
 	}
 
 	strcat(relative,path);
 
-	if((access(relative,F_OK) == -1) || strstr(path, "../"))  return 404;
+	if((access(relative,R_OK) == -1) || strstr(path, "../"))  return 404;
 		
 	// Returns 200 if method is GET, path does not go up in directories, and HTTP version is correct
 	if(strcasestr(method, "GET") && !(strstr(path, "../")) && strcasestr(httpVer, "HTTP/1.0\r\n\r\n")){
@@ -90,15 +93,19 @@ int verifyRequest(char method[], char * path, char appendedPath[], char httpVer[
 
 
 
-void logRequest(char * status, struct clientRequest *request){
+void logRequest(char * status, struct clientRequest *request, char * requestMessage){
 	
 	time_t t = time(NULL);
 	struct tm * currentTime = localtime(&t);
 	char formattedTime[18], clientMessage[PATH_MAX];
 	strftime(formattedTime,17,"%b %d %H:%M:%S",currentTime);
-	sscanf(request->buffer,"%s[ ]", clientMessage);
+	sscanf(request->buffer,"%[#\n\r\t]", clientMessage);
 
-	fprintf(stdout,"%s %s:%d %s; %s\n",formattedTime, inet_ntoa(request->address.sin_addr),ntohs(request->address.sin_port),clientMessage,status);
+	fprintf(stdout,"%s %s:%d %s; %s",formattedTime, inet_ntoa(request->address.sin_addr),ntohs(request->address.sin_port),requestMessage,status);
+	
+	if(strstr(status,"200")){
+		fprintf(stdout, "; %.*s\n",(int)strlen(request->dir)-1,request->dir+1);
+	}else fprintf(stdout, "\n");
 }
 
 
@@ -106,8 +113,9 @@ void logRequest(char * status, struct clientRequest *request){
 void handleRequest(struct clientRequest *request){
 
 	char * status, * buffer;
-	char method[7],path[PATH_MAX],httpVer[PATH_MAX];
+	char method[7],path[PATH_MAX],httpVer[PATH_MAX],requestMessage[PATH_MAX*2+7];
 	sscanf(request->buffer,"%s %s %16c", method, path, httpVer);
+	sscanf(request->buffer,"%[^\r\n]",requestMessage);
 	buffer = calloc(BUFFER_SIZE, sizeof(char));
 	status = calloc(STATUS_SIZE, sizeof(char));	
 
@@ -164,7 +172,7 @@ void handleRequest(struct clientRequest *request){
 
 	}
 
-	logRequest(status, request);
+	logRequest(status, request, requestMessage);
 	free(buffer);
 	free(status);
 }
