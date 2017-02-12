@@ -41,7 +41,6 @@ to run the server, run the makefile, it will set file permissions and build the 
 after the make file has been run, type in ./sws <port> <directory> to run the server.
 The server can also be run using make run to default to port 8080 and directory www.
 
-
 # Testing #
 
 Testing can be done by sending something similiar to the following command:
@@ -50,7 +49,8 @@ echo -e -n "GET / HTTP/1.1\r\n\r\n" | nc -u -s 192.168.1.100 10.10.1.100 8080 &
 
 where 8080 is the port of the server, 192.168.1.100 is the source IP, and 10.10.1.100 is the destination IP
 
-Testing can also be run using the testing file test_sws.sh
+Testing can also be run using the testing file test_sws.sh from another open terminal window. It will describe the
+test is running, and respond "Passed." or "Failed." based on the result.
 
 notes:
 
