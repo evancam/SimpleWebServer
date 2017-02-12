@@ -5,11 +5,12 @@ Evan Cameron, V00780688, Lab B02
 
 # Design #
 
-The server initially starts up and binds a socket. The input is then checked for whether or not it should quit,
-or continue waiting until a request is received from a client. Once a request is received, the request is then 
-checked for its content to determine the server response. If the request is a valid 200 request, then the file 
-associated with the request is also returned to the client. If it is not a valid request, a response is sent to 
-the client telling them this. Then the server returns to checking for responses or quit inputs. 
+The server initially starts up and binds a socket. The input is then checked for whether or not it should 
+quit, or continue waiting until a request is received from a client. Once a request is received, the 
+request is then checked for its content to determine the server response. If the request is a valid 200 
+request, then the file associated with the request is also returned to the client. If it is not a valid 
+request, a response is sent to the client telling them this. Then the server returns to checking for 
+responses or quit inputs. 
 
 
 # Structure #
@@ -49,14 +50,14 @@ echo -e -n "GET / HTTP/1.1\r\n\r\n" | nc -u -s 192.168.1.100 10.10.1.100 8080 &
 
 where 8080 is the port of the server, 192.168.1.100 is the source IP, and 10.10.1.100 is the destination IP
 
-Testing can also be run using the testing file test_sws.sh from another open terminal window. It will describe the
-test is running, and respond "Passed." or "Failed." based on the result.
+Testing can also be run using the testing file test_sws.sh from another open terminal window. It will 
+describe the test that is currently running, and respond "Passed." or "Failed." based on the result.
 
 notes:
 
 if q is input at the same time as a request is sent to the socket, it is likely the server will close
 before a response is set. This has not been tested, but the q input is checked before the request is parsed.
 
-We also assume that the request to the server follows the <Method> <path> <HTTP version> convention. The server
-will encounter issues if it is thrown garbage inputs.
+We also assume that the request to the server follows the <Method> <path> <HTTP version> convention. The 
+server will encounter issues if it is thrown garbage inputs.
 
